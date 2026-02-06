@@ -1,0 +1,1243 @@
+<!--
+╔═══════════════════════════════════════════════════════════╗
+║ DRESSUP DEMO - BUILD STATUS                               ║
+╠═══════════════════════════════════════════════════════════╣
+║ Completed: Phase 1, 2, 3, 4, 5, 6, 7, 8, 9                ║
+║ Current:   Phase 9 - Polish & Complete                    ║
+║ Next:      DONE - Full demo complete!                     ║
+║ Status:    PRODUCTION READY                               ║
+║ Last Updated: Feb 6, 2025                                 ║
+╚═══════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DressUp! - Your Smart Wardrobe</title>
+    <meta name="description" content="Smart wardrobe assistant that recommends outfits based on occasion, weather, and your style preferences.">
+    <meta name="theme-color" content="#292524">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Base transitions */
+        .step-content { transition: opacity 0.3s ease, transform 0.3s ease; }
+        .step-content.hidden { display: none; }
+        .step-indicator { transition: all 0.3s ease; }
+        
+        /* Card hover effects */
+        .item-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .item-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        /* Modal */
+        .modal { transition: opacity 0.2s ease; }
+        .modal.hidden { opacity: 0; pointer-events: none; }
+        .modal-content { transition: transform 0.2s ease, opacity 0.2s ease; }
+        .modal.hidden .modal-content { transform: scale(0.95); opacity: 0; }
+        
+        /* Chips & toggles */
+        .category-chip, .context-chip { transition: all 0.2s ease; cursor: pointer; }
+        .category-chip.active, .context-chip.selected { background-color: #292524; color: white; border-color: #292524; }
+        .context-chip:hover { border-color: #78716c; }
+        .weather-toggle { transition: all 0.2s ease; }
+        .weather-toggle.active { background-color: #292524; color: white; }
+        
+        /* Loading */
+        .loading-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        /* Outfit cards */
+        .outfit-card { transition: all 0.3s ease; }
+        .outfit-card:hover { transform: translateY(-2px); }
+        .outfit-item { transition: transform 0.2s ease; }
+        .outfit-item:hover { transform: scale(1.05); }
+        .score-bar { transition: width 0.5s ease; }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .slide-up { animation: slideUp 0.3s ease forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .scale-in { animation: scaleIn 0.2s ease forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        
+        .bounce-in { animation: bounceIn 0.4s ease forwards; }
+        @keyframes bounceIn { 
+            0% { opacity: 0; transform: scale(0.3); } 
+            50% { transform: scale(1.05); } 
+            70% { transform: scale(0.9); } 
+            100% { opacity: 1; transform: scale(1); } 
+        }
+        
+        /* Feedback buttons */
+        .feedback-btn { transition: all 0.2s ease; }
+        .feedback-btn:hover { transform: scale(1.1); }
+        .feedback-btn.selected-love { background-color: #dcfce7; border-color: #22c55e; color: #16a34a; transform: scale(1.1); }
+        .feedback-btn.selected-ok { background-color: #f5f5f4; border-color: #78716c; color: #44403c; transform: scale(1.1); }
+        .feedback-btn.selected-no { background-color: #fee2e2; border-color: #ef4444; color: #dc2626; transform: scale(1.1); }
+        
+        .reason-tag { transition: all 0.2s ease; cursor: pointer; }
+        .reason-tag:hover { border-color: #78716c; background-color: #f5f5f4; }
+        .reason-tag.selected { background-color: #292524; color: white; border-color: #292524; }
+        
+        .feedback-panel { animation: slideUp 0.2s ease; }
+        .pulse-once { animation: pulseOnce 0.3s ease; }
+        @keyframes pulseOnce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+        
+        /* Skeleton loading */
+        .skeleton { background: linear-gradient(90deg, #f5f5f4 25%, #e7e5e4 50%, #f5f5f4 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        
+        /* Responsive improvements */
+        @media (max-width: 640px) {
+            .step-indicator span:last-child { display: none; }
+            .step-indicator { padding: 0.5rem 0.75rem; }
+            .outfit-item { width: 5.5rem !important; }
+            .outfit-item .h-20 { height: 4rem !important; }
+        }
+        
+        /* Touch feedback for mobile */
+        @media (hover: none) {
+            .item-card:active { transform: scale(0.98); }
+            .context-chip:active { transform: scale(0.95); }
+            .feedback-btn:active { transform: scale(1.15); }
+        }
+        
+        /* Smooth scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f5f5f4; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #a8a29e; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #78716c; }
+        
+        /* Focus states for accessibility */
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+            outline: 2px solid #292524;
+            outline-offset: 2px;
+        }
+        
+        /* Print styles */
+        @media print {
+            .step-indicator, button, .feedback-btn, nav { display: none !important; }
+            .outfit-card { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="bg-stone-50 min-h-screen">
+    
+    <!-- Loading overlay -->
+    <div id="app-loading" class="fixed inset-0 bg-stone-50 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="loading-spinner inline-block w-8 h-8 border-3 border-stone-300 border-t-stone-700 rounded-full mb-4" style="border-width: 3px;"></div>
+            <p class="text-stone-500 text-sm">Loading your wardrobe...</p>
+        </div>
+    </div>
+    
+    <div id="app" class="max-w-2xl mx-auto px-4 py-6 sm:py-8 opacity-0">
+        
+        <header class="text-center mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl font-light text-stone-800 tracking-wide">DressUp!</h1>
+            <p class="text-stone-500 text-xs sm:text-sm mt-1">Your smart wardrobe assistant</p>
+        </header>
+
+        <nav class="flex justify-center items-center gap-2 sm:gap-4 mb-8 sm:mb-10">
+            <button onclick="goToStep(1)" id="step-btn-1" class="step-indicator flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-medium bg-stone-800 text-white">
+                <span class="w-5 h-5 rounded-full bg-white text-stone-800 flex items-center justify-center text-xs">1</span>
+                <span>Wardrobe</span>
+            </button>
+            <div class="w-4 sm:w-8 h-px bg-stone-300"></div>
+            <button onclick="goToStep(2)" id="step-btn-2" class="step-indicator flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-medium bg-stone-200 text-stone-500">
+                <span class="w-5 h-5 rounded-full bg-stone-300 text-stone-600 flex items-center justify-center text-xs">2</span>
+                <span>Context</span>
+            </button>
+            <div class="w-4 sm:w-8 h-px bg-stone-300"></div>
+            <button onclick="goToStep(3)" id="step-btn-3" class="step-indicator flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-medium bg-stone-200 text-stone-500">
+                <span class="w-5 h-5 rounded-full bg-stone-300 text-stone-600 flex items-center justify-center text-xs">3</span>
+                <span>Outfits</span>
+            </button>
+        </nav>
+
+        <!-- Step 1: Wardrobe -->
+        <section id="step-1" class="step-content">
+            <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sm:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg sm:text-xl font-medium text-stone-800">Your Wardrobe</h2>
+                    <span id="item-count" class="text-sm text-stone-500">40 items</span>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-4 sm:mb-6 overflow-x-auto pb-1">
+                    <button onclick="filterCategory('all')" class="category-chip active px-3 py-1 rounded-full text-sm bg-stone-200 text-stone-600 whitespace-nowrap" data-category="all">All</button>
+                    <button onclick="filterCategory('top')" class="category-chip px-3 py-1 rounded-full text-sm bg-stone-200 text-stone-600 whitespace-nowrap" data-category="top">Tops</button>
+                    <button onclick="filterCategory('bottom')" class="category-chip px-3 py-1 rounded-full text-sm bg-stone-200 text-stone-600 whitespace-nowrap" data-category="bottom">Bottoms</button>
+                    <button onclick="filterCategory('shoes')" class="category-chip px-3 py-1 rounded-full text-sm bg-stone-200 text-stone-600 whitespace-nowrap" data-category="shoes">Shoes</button>
+                    <button onclick="filterCategory('outerwear')" class="category-chip px-3 py-1 rounded-full text-sm bg-stone-200 text-stone-600 whitespace-nowrap" data-category="outerwear">Outerwear</button>
+                </div>
+                <div id="wardrobe-container" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 sm:max-h-96 overflow-y-auto pr-1 sm:pr-2"></div>
+                <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-stone-100">
+                    <button onclick="openAddModal()" class="w-full py-3 border-2 border-dashed border-stone-300 rounded-xl text-stone-500 hover:border-stone-400 hover:text-stone-600 transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Add Item
+                    </button>
+                </div>
+            </div>
+            <div class="flex justify-end mt-4 sm:mt-6">
+                <button onclick="goToStep(2)" class="px-5 sm:px-6 py-3 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 transition-colors flex items-center gap-2">
+                    Next: Set Context
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Context -->
+        <section id="step-2" class="step-content hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sm:p-6 slide-up">
+                <h2 class="text-lg sm:text-xl font-medium text-stone-800 mb-1 sm:mb-2">What's the occasion?</h2>
+                <p class="text-stone-500 text-xs sm:text-sm mb-4">Select one that best fits your day</p>
+                <div id="occasion-container" class="grid grid-cols-3 gap-2 sm:gap-3">
+                    <button onclick="selectOccasion('work')" class="context-chip occasion-chip flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 rounded-xl border-2 border-stone-200" data-occasion="work"><span class="text-xl sm:text-2xl">💼</span><span class="text-xs sm:text-sm font-medium">Work</span></button>
+                    <button onclick="selectOccasion('casual')" class="context-chip occasion-chip flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 rounded-xl border-2 border-stone-200" data-occasion="casual"><span class="text-xl sm:text-2xl">☕</span><span class="text-xs sm:text-sm font-medium">Casual</span></button>
+                    <button onclick="selectOccasion('date')" class="context-chip occasion-chip flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 rounded-xl border-2 border-stone-200" data-occasion="date"><span class="text-xl sm:text-2xl">🌹</span><span class="text-xs sm:text-sm font-medium">Date</span></button>
+                    <button onclick="selectOccasion('formal')" class="context-chip occasion-chip flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 rounded-xl border-2 border-stone-200" data-occasion="formal"><span class="text-xl sm:text-2xl">🎩</span><span class="text-xs sm:text-sm font-medium">Formal</span></button>
+                    <button onclick="selectOccasion('gym')" class="context-chip occasion-chip flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 rounded-xl border-2 border-stone-200" data-occasion="gym"><span class="text-xl sm:text-2xl">🏋️</span><span class="text-xs sm:text-sm font-medium">Gym</span></button>
+                    <button onclick="selectOccasion('interview')" class="context-chip occasion-chip flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 rounded-xl border-2 border-stone-200" data-occasion="interview"><span class="text-xl sm:text-2xl">📋</span><span class="text-xs sm:text-sm font-medium">Interview</span></button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sm:p-6 mt-4 slide-up" style="animation-delay: 0.1s">
+                <h2 class="text-lg sm:text-xl font-medium text-stone-800 mb-1 sm:mb-2">What's your style mood?</h2>
+                <p class="text-stone-500 text-xs sm:text-sm mb-4">Pick one or more vibes</p>
+                <div id="mood-container" class="flex flex-wrap gap-2 sm:gap-3">
+                    <button onclick="toggleMood('minimal')" class="context-chip mood-chip flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border-2 border-stone-200" data-mood="minimal"><span>◯</span><span class="text-xs sm:text-sm font-medium">Minimal</span></button>
+                    <button onclick="toggleMood('classic')" class="context-chip mood-chip flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border-2 border-stone-200" data-mood="classic"><span>♟</span><span class="text-xs sm:text-sm font-medium">Classic</span></button>
+                    <button onclick="toggleMood('streetwear')" class="context-chip mood-chip flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border-2 border-stone-200" data-mood="streetwear"><span>🛹</span><span class="text-xs sm:text-sm font-medium">Streetwear</span></button>
+                    <button onclick="toggleMood('sporty')" class="context-chip mood-chip flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border-2 border-stone-200" data-mood="sporty"><span>⚡</span><span class="text-xs sm:text-sm font-medium">Sporty</span></button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sm:p-6 mt-4 slide-up" style="animation-delay: 0.2s">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg sm:text-xl font-medium text-stone-800">Weather</h2>
+                    <button onclick="toggleWeatherMode()" id="weather-mode-btn" class="text-xs text-stone-500 hover:text-stone-700 underline">Enter manually</button>
+                </div>
+                <div id="weather-auto" class="weather-mode">
+                    <div id="weather-loading" class="text-center py-6 hidden">
+                        <div class="loading-spinner inline-block w-6 h-6 border-2 border-stone-300 border-t-stone-600 rounded-full"></div>
+                        <p class="text-stone-500 text-sm mt-2">Fetching weather...</p>
+                    </div>
+                    <div id="weather-display" class="hidden">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 sm:gap-4">
+                                <span id="weather-icon" class="text-3xl sm:text-4xl">☀️</span>
+                                <div>
+                                    <p class="text-xl sm:text-2xl font-light text-stone-800"><span id="weather-temp">--</span>°</p>
+                                    <p id="weather-desc" class="text-xs sm:text-sm text-stone-500">--</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p id="weather-location" class="text-xs sm:text-sm font-medium text-stone-700">--</p>
+                                <p id="weather-category" class="text-xs text-stone-500 mt-1">--</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="weather-error" class="hidden text-center py-4">
+                        <p class="text-stone-500 text-sm">Couldn't fetch weather.</p>
+                        <button onclick="toggleWeatherMode()" class="text-stone-700 text-sm underline mt-1">Enter manually</button>
+                    </div>
+                    <div id="weather-prompt" class="text-center py-4">
+                        <button onclick="fetchWeather()" class="px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg text-sm text-stone-700 transition-colors flex items-center gap-2 mx-auto">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            Get my weather
+                        </button>
+                    </div>
+                </div>
+                <div id="weather-manual" class="weather-mode hidden">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-stone-700 mb-2">Temperature</label>
+                            <div class="flex gap-2">
+                                <button onclick="setManualTemp('hot')" class="weather-toggle flex-1 py-2 px-3 rounded-lg border border-stone-200 text-sm" data-temp="hot">🔥 Hot</button>
+                                <button onclick="setManualTemp('mild')" class="weather-toggle flex-1 py-2 px-3 rounded-lg border border-stone-200 text-sm" data-temp="mild">🌤 Mild</button>
+                                <button onclick="setManualTemp('cold')" class="weather-toggle flex-1 py-2 px-3 rounded-lg border border-stone-200 text-sm" data-temp="cold">❄️ Cold</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-stone-700 mb-2">Rain?</label>
+                            <div class="flex gap-2">
+                                <button onclick="setManualRain(false)" class="weather-toggle flex-1 py-2 px-3 rounded-lg border border-stone-200 text-sm active" data-rain="false">☀️ No rain</button>
+                                <button onclick="setManualRain(true)" class="weather-toggle flex-1 py-2 px-3 rounded-lg border border-stone-200 text-sm" data-rain="true">🌧 Rain</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="context-summary" class="bg-stone-100 rounded-xl p-3 sm:p-4 mt-4 hidden scale-in">
+                <p class="text-xs sm:text-sm text-stone-600"><span class="font-medium">Your selection:</span><span id="summary-occasion" class="ml-2"></span><span id="summary-moods" class="ml-2"></span><span id="summary-weather" class="ml-2"></span></p>
+            </div>
+
+            <div class="flex justify-between mt-4 sm:mt-6 gap-3">
+                <button onclick="goToStep(1)" class="px-4 sm:px-6 py-3 bg-white border border-stone-300 text-stone-700 rounded-xl font-medium hover:bg-stone-50 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    <span class="hidden sm:inline">Back</span>
+                </button>
+                <button onclick="generateRecommendations(); goToStep(3)" id="get-recommendations-btn" class="flex-1 sm:flex-none px-5 sm:px-6 py-3 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                    <span>Get Recommendations</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3: Recommendations -->
+        <section id="step-3" class="step-content hidden">
+            <!-- Context Reminder -->
+            <div id="context-reminder" class="bg-stone-100 rounded-xl p-3 mb-4 flex items-center justify-between fade-in">
+                <p class="text-xs sm:text-sm text-stone-600"><span id="reminder-text"></span></p>
+                <button onclick="goToStep(2)" class="text-xs text-stone-500 hover:text-stone-700 underline ml-2 whitespace-nowrap">Edit</button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sm:p-6">
+                <div class="flex justify-between items-center mb-4 sm:mb-6">
+                    <h2 class="text-lg sm:text-xl font-medium text-stone-800">Your Outfits</h2>
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <button onclick="showFeedbackStats()" id="feedback-stats-btn" class="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-50 transition-colors" title="View preferences">
+                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                        </button>
+                        <button onclick="shuffleRecommendations()" id="shuffle-btn" class="text-sm text-stone-500 hover:text-stone-700 flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            <span class="hidden sm:inline">Shuffle</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="recommendations-container"></div>
+            </div>
+
+            <!-- Missing Items Alert -->
+            <div id="missing-items-alert" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4 fade-in">
+                <div class="flex items-start gap-3">
+                    <span class="text-amber-500 text-xl flex-shrink-0">⚠️</span>
+                    <div>
+                        <p class="text-sm font-medium text-amber-800">Some items might help</p>
+                        <p id="missing-items-text" class="text-sm text-amber-700 mt-1"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Copy Button -->
+            <div class="flex justify-center mt-4 sm:mt-6">
+                <button onclick="copyOutfit()" class="px-4 py-2 text-sm text-stone-500 hover:text-stone-700 flex items-center gap-2 hover:bg-white rounded-lg transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                    Copy top pick
+                </button>
+            </div>
+
+            <div class="flex justify-start mt-4">
+                <button onclick="goToStep(2)" class="px-4 sm:px-6 py-3 bg-white border border-stone-300 text-stone-700 rounded-xl font-medium hover:bg-stone-50 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    Back to Context
+                </button>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center mt-8 sm:mt-12 pb-4">
+            <p class="text-xs text-stone-400">DressUp! Demo • Built with ❤️</p>
+        </footer>
+
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="add-modal" class="modal hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="p-4 sm:p-6">
+                <div class="flex justify-between items-center mb-4 sm:mb-6">
+                    <h3 class="text-lg font-medium text-stone-800">Add New Item</h3>
+                    <button onclick="closeAddModal()" class="text-stone-400 hover:text-stone-600 p-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <form id="add-item-form" onsubmit="handleAddItem(event)" class="space-y-4">
+                    <div><label class="block text-sm font-medium text-stone-700 mb-1">Item Name</label><input type="text" name="name" required class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-500 focus:border-stone-500" placeholder="e.g., Blue Denim Jacket"></div>
+                    <div><label class="block text-sm font-medium text-stone-700 mb-1">Category</label><select name="category" required class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-500"><option value="top">Top</option><option value="bottom">Bottom</option><option value="shoes">Shoes</option><option value="outerwear">Outerwear</option></select></div>
+                    <div><label class="block text-sm font-medium text-stone-700 mb-1">Color</label><select name="color" required class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-500"><option value="white">White</option><option value="black">Black</option><option value="grey">Grey</option><option value="navy">Navy</option><option value="blue">Blue</option><option value="brown">Brown</option><option value="beige">Beige</option><option value="cream">Cream</option><option value="olive">Olive</option><option value="burgundy">Burgundy</option><option value="khaki">Khaki</option><option value="pink">Pink</option></select></div>
+                    <div><label class="block text-sm font-medium text-stone-700 mb-1">Formality</label><select name="formality" required class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-500"><option value="casual">Casual</option><option value="smart-casual">Smart Casual</option><option value="formal">Formal</option></select></div>
+                    <div><label class="block text-sm font-medium text-stone-700 mb-2">Style (select all that apply)</label><div class="flex flex-wrap gap-2"><label class="flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer hover:bg-stone-50"><input type="checkbox" name="styles" value="classic" class="w-4 h-4"><span class="text-sm">Classic</span></label><label class="flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer hover:bg-stone-50"><input type="checkbox" name="styles" value="minimal" class="w-4 h-4"><span class="text-sm">Minimal</span></label><label class="flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer hover:bg-stone-50"><input type="checkbox" name="styles" value="streetwear" class="w-4 h-4"><span class="text-sm">Streetwear</span></label><label class="flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer hover:bg-stone-50"><input type="checkbox" name="styles" value="sporty" class="w-4 h-4"><span class="text-sm">Sporty</span></label></div></div>
+                    <div><label class="block text-sm font-medium text-stone-700 mb-2">Weather (select all that apply)</label><div class="flex flex-wrap gap-2"><label class="flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer hover:bg-stone-50"><input type="checkbox" name="weather" value="hot" class="w-4 h-4"><span class="text-sm">Hot</span></label><label class="flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer hover:bg-stone-50"><input type="checkbox" name="weather" value="mild" class="w-4 h-4"><span class="text-sm">Mild</span></label><label class="flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer hover:bg-stone-50"><input type="checkbox" name="weather" value="cold" class="w-4 h-4"><span class="text-sm">Cold</span></label><label class="flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer hover:bg-stone-50"><input type="checkbox" name="weather" value="rain-friendly" class="w-4 h-4"><span class="text-sm">Rain-friendly</span></label></div></div>
+                    <div class="flex gap-3 pt-4"><button type="button" onclick="closeAddModal()" class="flex-1 py-2.5 border border-stone-300 rounded-lg text-stone-700 hover:bg-stone-50 font-medium">Cancel</button><button type="submit" class="flex-1 py-2.5 bg-stone-800 text-white rounded-lg hover:bg-stone-700 font-medium">Add Item</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Stats Modal -->
+    <div id="stats-modal" class="modal hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-sm">
+            <div class="p-4 sm:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-stone-800">Your Preferences</h3>
+                    <button onclick="closeStatsModal()" class="text-stone-400 hover:text-stone-600 p-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div id="stats-content" class="space-y-4"></div>
+                <div class="mt-6 pt-4 border-t border-stone-100">
+                    <button onclick="clearFeedback()" class="w-full py-2 text-sm text-stone-500 hover:text-red-600 transition-colors">Reset all feedback</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2"></div>
+
+    <script>
+    // ============================================================
+    // SEED WARDROBE DATA
+    // ============================================================
+    const SEED_WARDROBE = [
+        { id: "top-001", name: "White Oxford Shirt", category: "top", color: "white", formality: "smart-casual", styles: ["classic", "minimal"], weather: ["mild", "cold"] },
+        { id: "top-002", name: "Navy Blue Dress Shirt", category: "top", color: "navy", formality: "formal", styles: ["classic"], weather: ["mild", "cold"] },
+        { id: "top-003", name: "Black Crewneck T-Shirt", category: "top", color: "black", formality: "casual", styles: ["minimal", "streetwear"], weather: ["hot", "mild"] },
+        { id: "top-004", name: "Grey Cashmere Sweater", category: "top", color: "grey", formality: "smart-casual", styles: ["classic", "minimal"], weather: ["cold"] },
+        { id: "top-005", name: "Light Blue Linen Shirt", category: "top", color: "light-blue", formality: "smart-casual", styles: ["classic", "minimal"], weather: ["hot", "mild"] },
+        { id: "top-006", name: "Burgundy Polo Shirt", category: "top", color: "burgundy", formality: "smart-casual", styles: ["classic", "sporty"], weather: ["hot", "mild"] },
+        { id: "top-007", name: "White Crew Neck T-Shirt", category: "top", color: "white", formality: "casual", styles: ["minimal", "classic"], weather: ["hot", "mild"] },
+        { id: "top-008", name: "Olive Green Henley", category: "top", color: "olive", formality: "casual", styles: ["classic", "streetwear"], weather: ["mild"] },
+        { id: "top-009", name: "Striped Breton Top", category: "top", color: "navy-white", formality: "casual", styles: ["classic", "minimal"], weather: ["mild"] },
+        { id: "top-010", name: "Black Turtleneck", category: "top", color: "black", formality: "smart-casual", styles: ["minimal", "classic"], weather: ["cold"] },
+        { id: "top-011", name: "Cream Silk Blouse", category: "top", color: "cream", formality: "formal", styles: ["classic", "minimal"], weather: ["mild", "cold"] },
+        { id: "top-012", name: "Denim Chambray Shirt", category: "top", color: "blue", formality: "casual", styles: ["classic", "streetwear"], weather: ["mild"] },
+        { id: "top-013", name: "Pink Button-Down Shirt", category: "top", color: "pink", formality: "smart-casual", styles: ["classic"], weather: ["mild", "cold"] },
+        { id: "top-014", name: "Grey Athletic Tank", category: "top", color: "grey", formality: "casual", styles: ["sporty"], weather: ["hot"] },
+        { id: "top-015", name: "Charcoal V-Neck Sweater", category: "top", color: "charcoal", formality: "smart-casual", styles: ["classic", "minimal"], weather: ["cold"] },
+        { id: "bottom-001", name: "Dark Indigo Jeans", category: "bottom", color: "indigo", formality: "casual", styles: ["classic", "streetwear", "minimal"], weather: ["mild", "cold"] },
+        { id: "bottom-002", name: "Khaki Chinos", category: "bottom", color: "khaki", formality: "smart-casual", styles: ["classic"], weather: ["mild", "hot"] },
+        { id: "bottom-003", name: "Navy Dress Trousers", category: "bottom", color: "navy", formality: "formal", styles: ["classic"], weather: ["mild", "cold"] },
+        { id: "bottom-004", name: "Black Slim Trousers", category: "bottom", color: "black", formality: "formal", styles: ["classic", "minimal"], weather: ["mild", "cold"] },
+        { id: "bottom-005", name: "Light Wash Jeans", category: "bottom", color: "light-blue", formality: "casual", styles: ["streetwear", "classic"], weather: ["mild", "hot"] },
+        { id: "bottom-006", name: "Olive Cargo Pants", category: "bottom", color: "olive", formality: "casual", styles: ["streetwear", "sporty"], weather: ["mild", "cold"] },
+        { id: "bottom-007", name: "Grey Wool Trousers", category: "bottom", color: "grey", formality: "formal", styles: ["classic"], weather: ["cold"] },
+        { id: "bottom-008", name: "Beige Linen Pants", category: "bottom", color: "beige", formality: "smart-casual", styles: ["classic", "minimal"], weather: ["hot"] },
+        { id: "bottom-009", name: "Black Joggers", category: "bottom", color: "black", formality: "casual", styles: ["sporty", "streetwear"], weather: ["mild", "cold"] },
+        { id: "bottom-010", name: "Navy Chino Shorts", category: "bottom", color: "navy", formality: "casual", styles: ["classic", "sporty"], weather: ["hot"] },
+        { id: "bottom-011", name: "Charcoal Dress Pants", category: "bottom", color: "charcoal", formality: "formal", styles: ["classic", "minimal"], weather: ["mild", "cold"] },
+        { id: "bottom-012", name: "White Linen Shorts", category: "bottom", color: "white", formality: "casual", styles: ["minimal", "classic"], weather: ["hot"] },
+        { id: "shoes-001", name: "White Leather Sneakers", category: "shoes", color: "white", formality: "casual", styles: ["minimal", "streetwear", "classic"], weather: ["mild", "hot"] },
+        { id: "shoes-002", name: "Brown Oxford Shoes", category: "shoes", color: "brown", formality: "formal", styles: ["classic"], weather: ["mild", "cold"] },
+        { id: "shoes-003", name: "Black Leather Loafers", category: "shoes", color: "black", formality: "smart-casual", styles: ["classic", "minimal"], weather: ["mild"] },
+        { id: "shoes-004", name: "Navy Canvas Sneakers", category: "shoes", color: "navy", formality: "casual", styles: ["classic", "streetwear"], weather: ["mild", "hot"] },
+        { id: "shoes-005", name: "Black Chelsea Boots", category: "shoes", color: "black", formality: "smart-casual", styles: ["classic", "minimal", "streetwear"], weather: ["cold", "rain-friendly"] },
+        { id: "shoes-006", name: "Brown Leather Boots", category: "shoes", color: "brown", formality: "smart-casual", styles: ["classic"], weather: ["cold", "rain-friendly"] },
+        { id: "shoes-007", name: "Grey Running Shoes", category: "shoes", color: "grey", formality: "casual", styles: ["sporty"], weather: ["mild", "hot"] },
+        { id: "shoes-008", name: "Tan Suede Desert Boots", category: "shoes", color: "tan", formality: "smart-casual", styles: ["classic", "minimal"], weather: ["mild"] },
+        { id: "outer-001", name: "Navy Wool Blazer", category: "outerwear", color: "navy", formality: "formal", styles: ["classic"], weather: ["mild", "cold"] },
+        { id: "outer-002", name: "Black Leather Jacket", category: "outerwear", color: "black", formality: "casual", styles: ["streetwear", "minimal"], weather: ["mild", "cold"] },
+        { id: "outer-003", name: "Camel Wool Coat", category: "outerwear", color: "camel", formality: "smart-casual", styles: ["classic", "minimal"], weather: ["cold"] },
+        { id: "outer-004", name: "Olive Field Jacket", category: "outerwear", color: "olive", formality: "casual", styles: ["classic", "streetwear"], weather: ["mild", "rain-friendly"] },
+        { id: "outer-005", name: "Grey Zip-Up Hoodie", category: "outerwear", color: "grey", formality: "casual", styles: ["sporty", "streetwear"], weather: ["mild", "cold"] }
+    ];
+
+    const COLOR_MAP = { 'white': '#FFFFFF', 'black': '#1a1a1a', 'grey': '#6B7280', 'charcoal': '#374151', 'navy': '#1e3a5f', 'blue': '#3B82F6', 'light-blue': '#93C5FD', 'indigo': '#312E81', 'brown': '#78350F', 'tan': '#D2B48C', 'beige': '#E8DCC4', 'cream': '#FFFDD0', 'khaki': '#C3B091', 'olive': '#556B2F', 'green': '#22C55E', 'burgundy': '#722F37', 'red': '#EF4444', 'pink': '#F9A8D4', 'camel': '#C19A6B', 'navy-white': 'linear-gradient(135deg, #1e3a5f 50%, #FFFFFF 50%)' };
+    const CATEGORY_ICONS = { 'top': '👕', 'bottom': '👖', 'shoes': '👟', 'outerwear': '🧥' };
+    const OCCASION_FORMALITY = { 'work': ['smart-casual', 'formal'], 'casual': ['casual', 'smart-casual'], 'date': ['smart-casual', 'formal'], 'formal': ['formal'], 'gym': ['casual'], 'interview': ['formal', 'smart-casual'] };
+    const OCCASION_BLOCKS = { 'interview': { styles: ['streetwear', 'sporty'] }, 'formal': { styles: ['streetwear', 'sporty'] }, 'gym': { styles: ['classic'] } };
+    const COLOR_HARMONY = { 'white': ['navy', 'black', 'grey', 'indigo', 'olive', 'burgundy'], 'black': ['white', 'grey', 'cream', 'camel', 'tan', 'pink'], 'navy': ['white', 'cream', 'khaki', 'tan', 'light-blue', 'grey'], 'grey': ['white', 'black', 'navy', 'burgundy', 'blue'], 'charcoal': ['white', 'light-blue', 'pink', 'cream'], 'brown': ['white', 'cream', 'beige', 'khaki', 'navy'], 'tan': ['white', 'navy', 'brown', 'olive'], 'beige': ['white', 'navy', 'brown', 'olive'], 'cream': ['navy', 'brown', 'black', 'charcoal'], 'khaki': ['white', 'navy', 'light-blue', 'burgundy'], 'olive': ['white', 'cream', 'tan', 'khaki'], 'indigo': ['white', 'grey', 'tan'], 'light-blue': ['white', 'navy', 'khaki'], 'burgundy': ['white', 'grey', 'cream', 'khaki'] };
+    const WEIGHTS = { occasion: 45, weather: 35, style: 20 };
+    const FEEDBACK_REASONS = [
+        { id: 'color', label: 'Wrong color', icon: '🎨' },
+        { id: 'style', label: 'Not my style', icon: '✨' },
+        { id: 'formality', label: 'Too formal/casual', icon: '👔' },
+        { id: 'weather', label: 'Wrong for weather', icon: '🌡️' },
+        { id: 'combo', label: 'Bad combination', icon: '🔗' },
+        { id: 'worn', label: 'Wore recently', icon: '🔄' }
+    ];
+
+    // ============================================================
+    // STORAGE
+    // ============================================================
+    function initializeWardrobe() { if (!localStorage.getItem('dressup_wardrobe')) localStorage.setItem('dressup_wardrobe', JSON.stringify(SEED_WARDROBE)); updateItemCount(); }
+    function getWardrobe() { return JSON.parse(localStorage.getItem('dressup_wardrobe') || JSON.stringify(SEED_WARDROBE)); }
+    function saveWardrobe(w) { localStorage.setItem('dressup_wardrobe', JSON.stringify(w)); updateItemCount(); }
+    function addItemToWardrobe(item) { const w = getWardrobe(); item.id = 'user-' + Date.now(); w.push(item); saveWardrobe(w); return item; }
+    function deleteItem(id) { saveWardrobe(getWardrobe().filter(i => i.id !== id)); renderWardrobe(); }
+    function updateItemCount() { const el = document.getElementById('item-count'); if (el) el.textContent = getWardrobe().length + ' items'; }
+    function getFeedback() { return JSON.parse(localStorage.getItem('dressup_feedback') || '{}'); }
+    function saveFeedback(f) { localStorage.setItem('dressup_feedback', JSON.stringify(f)); }
+    function getOutfitFeedback() { return JSON.parse(localStorage.getItem('dressup_outfit_feedback') || '{}'); }
+    function saveOutfitFeedback(f) { localStorage.setItem('dressup_outfit_feedback', JSON.stringify(f)); }
+
+    // ============================================================
+    // NAVIGATION
+    // ============================================================
+    let currentStep = 1;
+    function goToStep(step) { 
+        currentStep = step; 
+        document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden')); 
+        const stepEl = document.getElementById('step-' + step);
+        stepEl.classList.remove('hidden');
+        updateStepIndicators(step); 
+        if (step === 3) updateContextReminder();
+        // Scroll to top on step change
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function updateStepIndicators(active) { 
+        for (let i = 1; i <= 3; i++) { 
+            const btn = document.getElementById('step-btn-' + i), span = btn.querySelector('span'); 
+            if (i === active) { 
+                btn.classList.remove('bg-stone-200', 'text-stone-500'); 
+                btn.classList.add('bg-stone-800', 'text-white'); 
+                span.classList.remove('bg-stone-300', 'text-stone-600'); 
+                span.classList.add('bg-white', 'text-stone-800'); 
+            } else { 
+                btn.classList.remove('bg-stone-800', 'text-white'); 
+                btn.classList.add('bg-stone-200', 'text-stone-500'); 
+                span.classList.remove('bg-white', 'text-stone-800'); 
+                span.classList.add('bg-stone-300', 'text-stone-600'); 
+            } 
+        } 
+    }
+
+    // ============================================================
+    // WARDROBE
+    // ============================================================
+    let currentFilter = 'all';
+    function filterCategory(cat) { 
+        currentFilter = cat; 
+        document.querySelectorAll('.category-chip').forEach(c => { 
+            c.classList.remove('active'); 
+            if (c.dataset.category === cat) c.classList.add('active'); 
+        }); 
+        renderWardrobe(); 
+    }
+    function renderWardrobe() { 
+        const container = document.getElementById('wardrobe-container'), 
+            wardrobe = getWardrobe(), 
+            filtered = currentFilter === 'all' ? wardrobe : wardrobe.filter(i => i.category === currentFilter); 
+        
+        if (!filtered.length) { 
+            container.innerHTML = '<div class="col-span-full text-center py-8 text-stone-400">No items in this category</div>'; 
+            return; 
+        } 
+        
+        container.innerHTML = filtered.map((i, idx) => { 
+            const c = COLOR_MAP[i.color] || '#ccc', 
+                bg = c.includes('gradient') ? `background:${c}` : `background-color:${c}`; 
+            const fb = getFeedback()[i.id]; 
+            const fbIndicator = fb && (fb.love > 0 || fb.no > 0) ? `<span class="absolute top-2 left-2 text-xs">${fb.love > 0 ? '❤️' : ''}${fb.no > 0 ? '👎' : ''}</span>` : ''; 
+            return `
+                <div class="item-card bg-stone-50 rounded-xl p-3 border border-stone-200 relative group fade-in" style="animation-delay: ${idx * 0.03}s">
+                    <button onclick="deleteItem('${i.id}')" class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600" aria-label="Delete item">✕</button>
+                    ${fbIndicator}
+                    <div class="w-full h-14 sm:h-16 rounded-lg mb-2 border border-stone-200" style="${bg}"></div>
+                    <p class="text-xs sm:text-sm font-medium text-stone-800 truncate">${i.name}</p>
+                    <div class="flex items-center gap-1 sm:gap-2 mt-1">
+                        <span class="text-xs text-stone-500">${CATEGORY_ICONS[i.category]||''}</span>
+                        <span class="text-xs px-1.5 sm:px-2 py-0.5 bg-stone-200 rounded-full text-stone-600 truncate">${i.formality}</span>
+                    </div>
+                </div>
+            `; 
+        }).join(''); 
+    }
+
+    // ============================================================
+    // ADD MODAL
+    // ============================================================
+    function openAddModal() { 
+        document.getElementById('add-modal').classList.remove('hidden'); 
+        document.body.style.overflow = 'hidden'; 
+        // Focus first input
+        setTimeout(() => document.querySelector('#add-item-form input[name="name"]').focus(), 100);
+    }
+    function closeAddModal() { 
+        document.getElementById('add-modal').classList.add('hidden'); 
+        document.body.style.overflow = ''; 
+        document.getElementById('add-item-form').reset(); 
+    }
+    function handleAddItem(e) { 
+        e.preventDefault(); 
+        const form = e.target, fd = new FormData(form), styles = [], weather = []; 
+        form.querySelectorAll('input[name="styles"]:checked').forEach(c => styles.push(c.value)); 
+        form.querySelectorAll('input[name="weather"]:checked').forEach(c => weather.push(c.value)); 
+        addItemToWardrobe({ 
+            name: fd.get('name'), 
+            category: fd.get('category'), 
+            color: fd.get('color'), 
+            formality: fd.get('formality'), 
+            styles: styles.length ? styles : ['classic'], 
+            weather: weather.length ? weather : ['mild'] 
+        }); 
+        closeAddModal(); 
+        renderWardrobe(); 
+        showToast('✓ Item added!'); 
+    }
+    
+    function showToast(msg, duration = 2500) { 
+        const container = document.getElementById('toast-container');
+        const t = document.createElement('div'); 
+        t.className = 'bg-stone-800 text-white px-4 py-2 rounded-lg text-sm shadow-lg bounce-in'; 
+        t.textContent = msg; 
+        container.appendChild(t); 
+        setTimeout(() => { 
+            t.style.opacity = '0'; 
+            t.style.transform = 'translateY(10px)';
+            t.style.transition = 'all 0.3s'; 
+            setTimeout(() => t.remove(), 300); 
+        }, duration); 
+    }
+    
+    document.getElementById('add-modal').addEventListener('click', function(e) { if (e.target === this) closeAddModal(); });
+
+    // ============================================================
+    // CONTEXT
+    // ============================================================
+    let selectedOccasion = null, selectedMoods = [];
+    function selectOccasion(occ) { 
+        selectedOccasion = occ; 
+        document.querySelectorAll('.occasion-chip').forEach(c => { 
+            c.classList.remove('selected'); 
+            if (c.dataset.occasion === occ) c.classList.add('selected'); 
+        }); 
+        updateContextSummary(); 
+        validateContext(); 
+    }
+    function toggleMood(mood) { 
+        const idx = selectedMoods.indexOf(mood); 
+        if (idx > -1) selectedMoods.splice(idx, 1); 
+        else selectedMoods.push(mood); 
+        document.querySelectorAll('.mood-chip').forEach(c => { 
+            c.classList.remove('selected'); 
+            if (selectedMoods.includes(c.dataset.mood)) c.classList.add('selected'); 
+        }); 
+        updateContextSummary(); 
+        validateContext(); 
+    }
+    function updateContextSummary() { 
+        const summary = document.getElementById('context-summary'); 
+        if (selectedOccasion || selectedMoods.length || currentWeather) { 
+            summary.classList.remove('hidden'); 
+            document.getElementById('summary-occasion').textContent = selectedOccasion ? `📍 ${cap(selectedOccasion)}` : ''; 
+            document.getElementById('summary-moods').textContent = selectedMoods.length ? `• ${selectedMoods.map(cap).join(', ')}` : ''; 
+            document.getElementById('summary-weather').textContent = currentWeather ? `• ${cap(currentWeather.category)}${currentWeather.isRaining ? ' + Rain' : ''}` : ''; 
+        } else summary.classList.add('hidden'); 
+    }
+    function validateContext() { document.getElementById('get-recommendations-btn').disabled = !selectedOccasion; }
+    function getContext() { return { occasion: selectedOccasion, moods: selectedMoods, weather: currentWeather }; }
+    function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+    function updateContextReminder() { 
+        const ctx = getContext(); 
+        let text = `${cap(ctx.occasion)}`; 
+        if (ctx.moods.length) text += ` • ${ctx.moods.map(cap).join(', ')}`; 
+        if (ctx.weather) text += ` • ${cap(ctx.weather.category)}${ctx.weather.isRaining ? ' + Rain' : ''}`; 
+        document.getElementById('reminder-text').textContent = text; 
+    }
+
+    // ============================================================
+    // WEATHER
+    // ============================================================
+    let currentWeather = null, isManualMode = false, manualTemp = null, manualRain = false;
+    function toggleWeatherMode() { 
+        isManualMode = !isManualMode; 
+        document.getElementById('weather-auto').classList.toggle('hidden', isManualMode); 
+        document.getElementById('weather-manual').classList.toggle('hidden', !isManualMode); 
+        document.getElementById('weather-mode-btn').textContent = isManualMode ? 'Use auto-detect' : 'Enter manually'; 
+    }
+    function fetchWeather() { 
+        document.getElementById('weather-prompt').classList.add('hidden'); 
+        document.getElementById('weather-loading').classList.remove('hidden'); 
+        document.getElementById('weather-error').classList.add('hidden'); 
+        document.getElementById('weather-display').classList.add('hidden'); 
+        if (!navigator.geolocation) { showWeatherError(); return; } 
+        navigator.geolocation.getCurrentPosition(
+            pos => fetchWeatherData(pos.coords.latitude, pos.coords.longitude), 
+            () => showWeatherError(), 
+            { timeout: 10000 }
+        ); 
+    }
+    async function fetchWeatherData(lat, lon) { 
+        try { 
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code&timezone=auto`); 
+            const data = await res.json(); 
+            const temp = Math.round(data.current.temperature_2m), code = data.current.weather_code; 
+            currentWeather = { 
+                temp, 
+                isRaining: data.current.precipitation > 0 || [51,53,55,61,63,65,80,81,82,95,96,99].includes(code), 
+                category: temp >= 25 ? 'hot' : temp >= 15 ? 'mild' : 'cold', 
+                description: getWeatherDesc(code), 
+                icon: getWeatherIcon(code) 
+            }; 
+            displayWeather(currentWeather); 
+            updateContextSummary(); 
+        } catch (e) { showWeatherError(); } 
+    }
+    function getWeatherDesc(c) { const m = {0:'Clear',1:'Clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',51:'Drizzle',61:'Rain',80:'Showers',95:'Storm'}; return m[c] || 'Unknown'; }
+    function getWeatherIcon(c) { if ([0,1].includes(c)) return '☀️'; if ([2,3].includes(c)) return '⛅'; if ([45,48].includes(c)) return '🌫️'; if ([51,53,55,61,63,65,80,81,82].includes(c)) return '🌧️'; return '🌤️'; }
+    function displayWeather(w) { 
+        document.getElementById('weather-loading').classList.add('hidden'); 
+        document.getElementById('weather-display').classList.remove('hidden'); 
+        document.getElementById('weather-icon').textContent = w.icon; 
+        document.getElementById('weather-temp').textContent = w.temp; 
+        document.getElementById('weather-desc').textContent = w.description; 
+        document.getElementById('weather-location').textContent = 'Your location'; 
+        document.getElementById('weather-category').textContent = `Dressing for: ${cap(w.category)}`; 
+    }
+    function showWeatherError() { 
+        document.getElementById('weather-loading').classList.add('hidden'); 
+        document.getElementById('weather-error').classList.remove('hidden'); 
+    }
+    function setManualTemp(t) { 
+        manualTemp = t; 
+        document.querySelectorAll('[data-temp]').forEach(b => { 
+            b.classList.remove('active'); 
+            if (b.dataset.temp === t) b.classList.add('active'); 
+        }); 
+        updateManualWeather(); 
+    }
+    function setManualRain(r) { 
+        manualRain = r; 
+        document.querySelectorAll('[data-rain]').forEach(b => { 
+            b.classList.remove('active'); 
+            if (b.dataset.rain === String(r)) b.classList.add('active'); 
+        }); 
+        updateManualWeather(); 
+    }
+    function updateManualWeather() { 
+        if (manualTemp) { 
+            currentWeather = { 
+                temp: manualTemp === 'hot' ? 28 : manualTemp === 'mild' ? 20 : 10, 
+                isRaining: manualRain, 
+                category: manualTemp, 
+                description: 'Manual', 
+                icon: manualTemp === 'hot' ? '🔥' : manualTemp === 'mild' ? '🌤' : '❄️' 
+            }; 
+            updateContextSummary(); 
+        } 
+    }
+
+    // ============================================================
+    // SCORING ENGINE
+    // ============================================================
+    function scoreItem(item, context) { 
+        let score = 0, reasons = []; 
+        const allowedFormality = OCCASION_FORMALITY[context.occasion] || ['casual']; 
+        if (allowedFormality.includes(item.formality)) { 
+            score += WEIGHTS.occasion; 
+            reasons.push(`✓ ${cap(item.formality)} works for ${context.occasion}`); 
+        } else { 
+            score += WEIGHTS.occasion * 0.3; 
+        } 
+        
+        const blocks = OCCASION_BLOCKS[context.occasion]; 
+        if (blocks && blocks.styles.some(s => item.styles.includes(s))) { 
+            score -= 30; 
+            reasons.push(`✗ Style not suitable`); 
+        } 
+        
+        if (context.weather) { 
+            if (item.weather.includes(context.weather.category)) { 
+                score += WEIGHTS.weather; 
+                reasons.push(`✓ Good for ${context.weather.category} weather`); 
+            } else { 
+                score += WEIGHTS.weather * 0.2; 
+            } 
+            if (context.weather.isRaining && item.weather.includes('rain-friendly')) { 
+                score += 10; 
+                reasons.push(`✓ Rain-friendly`); 
+            } 
+        } else { 
+            score += WEIGHTS.weather * 0.5; 
+        } 
+        
+        if (context.moods.length > 0) { 
+            const matching = item.styles.filter(s => context.moods.includes(s)); 
+            score += (matching.length / context.moods.length) * WEIGHTS.style; 
+            if (matching.length) reasons.push(`✓ Matches ${matching.join(', ')} vibe`); 
+        } else { 
+            score += WEIGHTS.style * 0.5; 
+        } 
+        
+        const feedback = getFeedback()[item.id]; 
+        if (feedback) { 
+            if (feedback.love) {
+                const loveBonus = Math.min(feedback.love * 8, 25);
+                score += loveBonus; 
+                if (feedback.love >= 2) reasons.push(`❤️ You've loved this ${feedback.love}x`);
+            }
+            if (feedback.no) {
+                const noPenalty = Math.min(feedback.no * 12, 35);
+                score -= noPenalty;
+                if (feedback.reasons && feedback.reasons.length) {
+                    const topReason = FEEDBACK_REASONS.find(r => r.id === feedback.reasons[0]);
+                    if (topReason) reasons.push(`👎 Marked: ${topReason.label}`);
+                }
+            }
+        } 
+        
+        return { score: Math.max(0, Math.min(100, score)), reasons }; 
+    }
+
+    function scoreOutfit(outfit, context) { 
+        let total = 0, reasons = []; 
+        const items = Object.values(outfit).filter(i => i); 
+        items.forEach(i => { 
+            const r = scoreItem(i, context); 
+            total += r.score; 
+            reasons.push(...r.reasons); 
+        }); 
+        
+        let avg = total / items.length; 
+        const colors = items.map(i => i.color); 
+        let harmony = 0; 
+        for (let i = 0; i < colors.length; i++) { 
+            for (let j = i + 1; j < colors.length; j++) { 
+                if ((COLOR_HARMONY[colors[i]] || []).includes(colors[j])) harmony += 5; 
+            } 
+        } 
+        if (harmony > 0) { 
+            avg += Math.min(harmony, 15); 
+            reasons.push(`✓ Colors complement well`); 
+        } 
+        if (colors.includes('navy') && colors.includes('black')) { 
+            avg -= 10; 
+            reasons.push(`△ Navy + black can clash`); 
+        } 
+        
+        const outfitKey = getOutfitKey(outfit);
+        const outfitFb = getOutfitFeedback()[outfitKey];
+        if (outfitFb && outfitFb.no) {
+            avg -= 40;
+            reasons.push(`👎 You didn't like this combination`);
+        }
+        
+        return { score: Math.min(100, avg), reasons: [...new Set(reasons)] }; 
+    }
+    
+    function getOutfitKey(outfit) {
+        const ids = [outfit.top?.id, outfit.bottom?.id, outfit.shoes?.id, outfit.outerwear?.id]
+            .filter(id => id)
+            .sort()
+            .join('|');
+        return ids;
+    }
+
+    function generateOutfitCandidates(context) { 
+        const w = getWardrobe(), 
+            tops = w.filter(i => i.category === 'top'), 
+            bottoms = w.filter(i => i.category === 'bottom'), 
+            shoes = w.filter(i => i.category === 'shoes'), 
+            outer = w.filter(i => i.category === 'outerwear'); 
+        
+        const sT = tops.map(i => ({ item: i, ...scoreItem(i, context) })).sort((a, b) => b.score - a.score); 
+        const sB = bottoms.map(i => ({ item: i, ...scoreItem(i, context) })).sort((a, b) => b.score - a.score); 
+        const sS = shoes.map(i => ({ item: i, ...scoreItem(i, context) })).sort((a, b) => b.score - a.score); 
+        const sO = outer.map(i => ({ item: i, ...scoreItem(i, context) })).sort((a, b) => b.score - a.score); 
+        
+        const candidates = []; 
+        for (let t = 0; t < Math.min(5, sT.length); t++) { 
+            for (let b = 0; b < Math.min(4, sB.length); b++) { 
+                const outfit = { 
+                    top: sT[t]?.item, 
+                    bottom: sB[b]?.item, 
+                    shoes: sS.length ? sS[Math.floor(Math.random() * Math.min(3, sS.length))]?.item : null, 
+                    outerwear: null 
+                }; 
+                if (context.weather && (context.weather.category === 'cold' || context.weather.isRaining) && sO.length) {
+                    outfit.outerwear = sO[0]?.item;
+                }
+                if (outfit.top && outfit.bottom) { 
+                    const { score, reasons } = scoreOutfit(outfit, context); 
+                    candidates.push({ outfit, score, reasons }); 
+                } 
+            } 
+        } 
+        return candidates; 
+    }
+
+    function selectTopOutfits(candidates, count = 3) { 
+        candidates.sort((a, b) => b.score - a.score); 
+        const selected = [], usedTops = new Set(); 
+        for (const c of candidates) { 
+            if (!usedTops.has(c.outfit.top?.id) || selected.length < 2) { 
+                selected.push(c); 
+                usedTops.add(c.outfit.top?.id); 
+                if (selected.length >= count) break; 
+            } 
+        } 
+        return selected; 
+    }
+
+    let currentRecommendations = [];
+    let outfitFeedbackState = {};
+
+    function generateRecommendations() { 
+        const ctx = getContext(); 
+        if (!ctx.occasion) { showToast('Select an occasion first'); return; } 
+        const candidates = generateOutfitCandidates(ctx); 
+        currentRecommendations = selectTopOutfits(candidates, 3); 
+        if (currentRecommendations.length) currentRecommendations[0].isTopPick = true; 
+        outfitFeedbackState = {};
+        renderRecommendations(); 
+        checkMissingItems(); 
+    }
+
+    function shuffleRecommendations() { 
+        generateRecommendations(); 
+        showToast('🔀 Shuffled!'); 
+    }
+
+    // ============================================================
+    // RECOMMENDATION DISPLAY
+    // ============================================================
+    function renderRecommendations() {
+        const container = document.getElementById('recommendations-container');
+        if (!currentRecommendations.length) { 
+            container.innerHTML = `
+                <div class="text-center py-12 text-stone-400">
+                    <p class="text-4xl mb-3">👔</p>
+                    <p class="text-lg mb-2">No outfits found</p>
+                    <p class="text-sm">Try adjusting your context or adding more items</p>
+                </div>
+            `; 
+            return; 
+        }
+        
+        container.innerHTML = currentRecommendations.map((rec, idx) => {
+            const { outfit, score, reasons, isTopPick } = rec;
+            const items = [outfit.top, outfit.bottom, outfit.shoes, outfit.outerwear].filter(i => i);
+            const feedbackState = outfitFeedbackState[idx] || {};
+            
+            return `
+                <div class="outfit-card mb-4 sm:mb-6 fade-in" style="animation-delay: ${idx * 0.1}s" id="outfit-${idx}">
+                    ${isTopPick ? `
+                    <div class="bg-gradient-to-r from-stone-800 to-stone-700 text-white px-3 sm:px-4 py-2 rounded-t-xl flex items-center justify-between">
+                        <span class="font-medium flex items-center gap-2 text-sm sm:text-base">⭐ Top Pick</span>
+                        <span class="text-stone-300 text-xs sm:text-sm">${Math.round(score)} points</span>
+                    </div>` : ''}
+                    
+                    <div class="bg-white ${isTopPick ? 'rounded-b-xl border-x border-b' : 'rounded-xl border'} border-stone-200 p-4 sm:p-5">
+                        <!-- Outfit Items -->
+                        <div class="flex gap-3 sm:gap-4 overflow-x-auto pb-3 -mx-1 px-1">
+                            ${items.map(item => renderOutfitItemCard(item)).join('')}
+                        </div>
+                        
+                        <!-- Score Bar -->
+                        ${!isTopPick ? `
+                        <div class="mt-3 sm:mt-4 mb-3">
+                            <div class="flex justify-between text-xs text-stone-500 mb-1">
+                                <span>Match Score</span>
+                                <span>${Math.round(score)}/100</span>
+                            </div>
+                            <div class="h-2 bg-stone-100 rounded-full overflow-hidden">
+                                <div class="score-bar h-full bg-stone-600 rounded-full" style="width: ${score}%"></div>
+                            </div>
+                        </div>` : ''}
+                        
+                        <!-- Why This Outfit -->
+                        <details class="mt-3 group">
+                            <summary class="text-xs sm:text-sm text-stone-500 cursor-pointer hover:text-stone-700 flex items-center gap-1">
+                                <span>Why this outfit?</span>
+                                <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                            </summary>
+                            <div class="mt-2 pl-2 border-l-2 border-stone-200 space-y-1">
+                                ${reasons.slice(0, 5).map(r => `<p class="text-xs text-stone-600">${r}</p>`).join('')}
+                            </div>
+                        </details>
+                        
+                        <!-- Feedback Buttons -->
+                        <div class="flex items-center justify-between mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-stone-100">
+                            <span class="text-xs text-stone-400">How's this?</span>
+                            <div class="flex gap-2" id="feedback-btns-${idx}">
+                                <button onclick="giveFeedback(${idx}, 'love')" class="feedback-btn px-3 py-1.5 rounded-full text-sm border border-stone-200 ${feedbackState.type === 'love' ? 'selected-love' : ''}" title="Love it" aria-label="Love this outfit">❤️</button>
+                                <button onclick="giveFeedback(${idx}, 'ok')" class="feedback-btn px-3 py-1.5 rounded-full text-sm border border-stone-200 ${feedbackState.type === 'ok' ? 'selected-ok' : ''}" title="It's okay" aria-label="This outfit is okay">👍</button>
+                                <button onclick="giveFeedback(${idx}, 'no')" class="feedback-btn px-3 py-1.5 rounded-full text-sm border border-stone-200 ${feedbackState.type === 'no' ? 'selected-no' : ''}" title="Not for me" aria-label="Don't like this outfit">👎</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Reason Panel -->
+                        <div id="reason-panel-${idx}" class="${feedbackState.type === 'no' && feedbackState.showReasons ? '' : 'hidden'} feedback-panel mt-3 pt-3 border-t border-stone-100">
+                            <p class="text-xs text-stone-500 mb-2">What didn't work? (optional)</p>
+                            <div class="flex flex-wrap gap-2">
+                                ${FEEDBACK_REASONS.map(r => `
+                                    <button onclick="toggleReason(${idx}, '${r.id}')" class="reason-tag px-2 sm:px-3 py-1 rounded-full text-xs border border-stone-200 flex items-center gap-1 ${(feedbackState.reasons || []).includes(r.id) ? 'selected' : ''}" data-reason="${r.id}">
+                                        <span>${r.icon}</span>
+                                        <span class="hidden sm:inline">${r.label}</span>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderOutfitItemCard(item) {
+        const c = COLOR_MAP[item.color] || '#ccc';
+        const bg = c.includes('gradient') ? `background:${c}` : `background-color:${c}`;
+        const label = { top: 'Top', bottom: 'Bottom', shoes: 'Shoes', outerwear: 'Layer' }[item.category];
+        
+        return `
+            <div class="outfit-item flex-shrink-0 w-24 sm:w-28 cursor-default">
+                <div class="relative">
+                    <div class="w-full h-16 sm:h-20 rounded-xl border-2 border-stone-200 shadow-sm" style="${bg}"></div>
+                    <span class="absolute -top-2 -right-2 w-5 h-5 sm:w-6 sm:h-6 bg-stone-800 text-white rounded-full flex items-center justify-center text-xs">${CATEGORY_ICONS[item.category]}</span>
+                </div>
+                <p class="text-xs sm:text-sm font-medium text-stone-800 mt-2 truncate">${item.name}</p>
+                <p class="text-xs text-stone-400">${label}</p>
+            </div>
+        `;
+    }
+
+    function giveFeedback(outfitIdx, type) {
+        const rec = currentRecommendations[outfitIdx];
+        if (!rec) return;
+        
+        const outfit = rec.outfit;
+        const feedback = getFeedback();
+        const outfitFb = getOutfitFeedback();
+        const items = [outfit.top, outfit.bottom, outfit.shoes, outfit.outerwear].filter(i => i);
+        
+        items.forEach(item => {
+            if (!feedback[item.id]) feedback[item.id] = { love: 0, no: 0, reasons: [] };
+            
+            if (type === 'love') { 
+                feedback[item.id].love = (feedback[item.id].love || 0) + 1; 
+                if (feedback[item.id].no > 0) feedback[item.id].no = Math.max(0, feedback[item.id].no - 1);
+            } else if (type === 'no') { 
+                feedback[item.id].no = (feedback[item.id].no || 0) + 1; 
+                if (feedback[item.id].love > 0) feedback[item.id].love = Math.max(0, feedback[item.id].love - 1);
+            }
+        });
+        
+        if (type === 'no') {
+            const outfitKey = getOutfitKey(outfit);
+            if (!outfitFb[outfitKey]) outfitFb[outfitKey] = { no: 0 };
+            outfitFb[outfitKey].no = 1;
+            saveOutfitFeedback(outfitFb);
+        }
+        
+        saveFeedback(feedback);
+        
+        outfitFeedbackState[outfitIdx] = { 
+            type, 
+            showReasons: type === 'no',
+            reasons: outfitFeedbackState[outfitIdx]?.reasons || []
+        };
+        
+        updateFeedbackUI(outfitIdx, type);
+        
+        const msgs = { 
+            love: '❤️ Noted!', 
+            ok: '👍 Got it!', 
+            no: '👎 Tell us why' 
+        };
+        showToast(msgs[type], 1500);
+    }
+    
+    function updateFeedbackUI(outfitIdx, type) {
+        const btnContainer = document.getElementById(`feedback-btns-${outfitIdx}`);
+        const reasonPanel = document.getElementById(`reason-panel-${outfitIdx}`);
+        
+        if (btnContainer) {
+            btnContainer.querySelectorAll('.feedback-btn').forEach(btn => {
+                btn.classList.remove('selected-love', 'selected-ok', 'selected-no', 'pulse-once');
+            });
+            
+            const selectedBtn = btnContainer.querySelector(`[title="${type === 'love' ? 'Love it' : type === 'ok' ? "It's okay" : 'Not for me'}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.add(`selected-${type}`, 'pulse-once');
+            }
+        }
+        
+        if (reasonPanel) {
+            if (type === 'no') {
+                reasonPanel.classList.remove('hidden');
+            } else {
+                reasonPanel.classList.add('hidden');
+            }
+        }
+    }
+    
+    function toggleReason(outfitIdx, reasonId) {
+        const rec = currentRecommendations[outfitIdx];
+        if (!rec) return;
+        
+        if (!outfitFeedbackState[outfitIdx]) {
+            outfitFeedbackState[outfitIdx] = { type: 'no', showReasons: true, reasons: [] };
+        }
+        
+        const reasons = outfitFeedbackState[outfitIdx].reasons || [];
+        const idx = reasons.indexOf(reasonId);
+        if (idx > -1) {
+            reasons.splice(idx, 1);
+        } else {
+            reasons.push(reasonId);
+        }
+        outfitFeedbackState[outfitIdx].reasons = reasons;
+        
+        const feedback = getFeedback();
+        const items = [rec.outfit.top, rec.outfit.bottom, rec.outfit.shoes, rec.outfit.outerwear].filter(i => i);
+        
+        items.forEach(item => {
+            if (!feedback[item.id]) feedback[item.id] = { love: 0, no: 0, reasons: [] };
+            feedback[item.id].reasons = [...new Set([...(feedback[item.id].reasons || []), ...reasons])];
+        });
+        saveFeedback(feedback);
+        
+        const panel = document.getElementById(`reason-panel-${outfitIdx}`);
+        if (panel) {
+            panel.querySelectorAll('.reason-tag').forEach(tag => {
+                if (reasons.includes(tag.dataset.reason)) {
+                    tag.classList.add('selected');
+                } else {
+                    tag.classList.remove('selected');
+                }
+            });
+        }
+        
+        showToast('✓ Saved', 1000);
+    }
+    
+    // ============================================================
+    // FEEDBACK STATS MODAL
+    // ============================================================
+    function showFeedbackStats() {
+        const feedback = getFeedback();
+        const wardrobe = getWardrobe();
+        const content = document.getElementById('stats-content');
+        
+        const loved = [], disliked = [];
+        wardrobe.forEach(item => {
+            const fb = feedback[item.id];
+            if (fb) {
+                if (fb.love > 0) loved.push({ item, count: fb.love });
+                if (fb.no > 0) disliked.push({ item, count: fb.no, reasons: fb.reasons || [] });
+            }
+        });
+        
+        loved.sort((a, b) => b.count - a.count);
+        disliked.sort((a, b) => b.count - a.count);
+        
+        if (!loved.length && !disliked.length) {
+            content.innerHTML = `
+                <div class="text-center py-6 text-stone-400">
+                    <p class="text-3xl mb-2">📊</p>
+                    <p class="text-sm">No feedback yet!</p>
+                    <p class="text-xs mt-1">Rate some outfits to see your preferences.</p>
+                </div>
+            `;
+        } else {
+            content.innerHTML = `
+                ${loved.length ? `
+                <div>
+                    <h4 class="text-sm font-medium text-stone-700 mb-2 flex items-center gap-2">❤️ Favorites</h4>
+                    <div class="space-y-2">
+                        ${loved.slice(0, 5).map(({ item, count }) => `
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-stone-600 truncate flex-1">${item.name}</span>
+                                <span class="text-stone-400 text-xs ml-2">${count}x</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>` : ''}
+                
+                ${disliked.length ? `
+                <div>
+                    <h4 class="text-sm font-medium text-stone-700 mb-2 flex items-center gap-2">👎 Not for you</h4>
+                    <div class="space-y-2">
+                        ${disliked.slice(0, 5).map(({ item, count, reasons }) => `
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-stone-600 truncate flex-1">${item.name}</span>
+                                <span class="text-stone-400 text-xs ml-2">${reasons.length ? reasons.map(r => FEEDBACK_REASONS.find(fr => fr.id === r)?.icon || '').join('') : `${count}x`}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>` : ''}
+            `;
+        }
+        
+        document.getElementById('stats-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeStatsModal() {
+        document.getElementById('stats-modal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    
+    function clearFeedback() {
+        if (confirm('Reset all your feedback? This cannot be undone.')) {
+            localStorage.removeItem('dressup_feedback');
+            localStorage.removeItem('dressup_outfit_feedback');
+            outfitFeedbackState = {};
+            closeStatsModal();
+            renderWardrobe();
+            if (currentRecommendations.length) renderRecommendations();
+            showToast('✓ Feedback cleared');
+        }
+    }
+    
+    document.getElementById('stats-modal').addEventListener('click', function(e) { if (e.target === this) closeStatsModal(); });
+
+    function checkMissingItems() {
+        const ctx = getContext();
+        const w = getWardrobe();
+        const missing = [];
+        
+        if (!w.some(i => i.category === 'shoes' && (OCCASION_FORMALITY[ctx.occasion] || []).includes(i.formality))) {
+            missing.push('suitable shoes');
+        }
+        if (ctx.weather?.category === 'cold' && !w.some(i => i.category === 'outerwear' && i.weather.includes('cold'))) {
+            missing.push('cold-weather outerwear');
+        }
+        if (ctx.weather?.isRaining && !w.some(i => i.weather.includes('rain-friendly'))) {
+            missing.push('rain-friendly items');
+        }
+        
+        const alert = document.getElementById('missing-items-alert');
+        if (missing.length) {
+            document.getElementById('missing-items-text').textContent = `You might be missing: ${missing.join(', ')}`;
+            alert.classList.remove('hidden');
+        } else {
+            alert.classList.add('hidden');
+        }
+    }
+
+    function copyOutfit() {
+        if (!currentRecommendations.length) { showToast('No outfit to copy'); return; }
+        const o = currentRecommendations[0].outfit;
+        const items = [o.top, o.bottom, o.shoes, o.outerwear].filter(i => i);
+        const text = '👔 My DressUp Outfit:\n' + items.map(i => `• ${i.name}`).join('\n');
+        navigator.clipboard.writeText(text).then(() => showToast('📋 Copied!')).catch(() => showToast('Could not copy'));
+    }
+
+    // ============================================================
+    // KEYBOARD SHORTCUTS
+    // ============================================================
+    document.addEventListener('keydown', function(e) {
+        // Escape to close modals
+        if (e.key === 'Escape') {
+            if (!document.getElementById('add-modal').classList.contains('hidden')) closeAddModal();
+            if (!document.getElementById('stats-modal').classList.contains('hidden')) closeStatsModal();
+        }
+    });
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function() { 
+        initializeWardrobe(); 
+        goToStep(1); 
+        renderWardrobe();
+        
+        // Hide loading screen and show app
+        setTimeout(() => {
+            document.getElementById('app-loading').style.opacity = '0';
+            document.getElementById('app-loading').style.transition = 'opacity 0.3s';
+            document.getElementById('app').style.opacity = '1';
+            document.getElementById('app').style.transition = 'opacity 0.3s';
+            setTimeout(() => {
+                document.getElementById('app-loading').style.display = 'none';
+            }, 300);
+        }, 500);
+    });
+    </script>
+</body>
+</html>
